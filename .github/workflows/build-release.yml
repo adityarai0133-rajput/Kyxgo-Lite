@@ -11,24 +11,24 @@ permissions:
 
 jobs:
   build-windows:
-    runs-on: windows-latest
+    runs-on: windows-2022
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.11 (Universal x64)
+      - name: Set up Universal Python 3.8 (Runs on Old & New Windows)
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.8.10'
           architecture: 'x64'
 
       - name: Install Build Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pyinstaller pypdf
+          pip install "pyinstaller<6.0" pypdf
 
-      - name: Generate Windows Version Metadata (Store Ready)
+      - name: Generate Windows Version Metadata
         shell: pwsh
         run: |
           @"
@@ -65,10 +65,10 @@ jobs:
         run: |
           pyinstaller --noconfirm --clean --onefile --windowed `
             --name "KyxgoLite" `
+            --paths "." `
             --version-file "version_info.txt" `
             --hidden-import "kyxgo_core" `
-            --hidden-import "sqlite3" `
-            --collect-all "tkinter" `
+            --hidden-import "pypdf" `
             kyxgo_app.py
 
       - name: Generate SHA256 Checksum
@@ -93,3 +93,4 @@ jobs:
             dist/KyxgoLite.exe
             dist/KyxgoLite.exe.sha256
           generate_release_notes: true
+          
