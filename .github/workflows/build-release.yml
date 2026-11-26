@@ -1,4 +1,4 @@
-name: Build Kyxgo Lite Universal Windows Release
+name: Build Kyxgo Lite EXE
 
 on:
   push:
@@ -11,86 +11,35 @@ permissions:
 
 jobs:
   build-windows:
-    runs-on: windows-2022
+    runs-on: windows-latest
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Universal Python 3.8 (Runs on Old & New Windows)
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.8.10'
-          architecture: 'x64'
+          python-version: '3.10'
 
-      - name: Install Build Dependencies
+      - name: Install PyInstaller and pypdf
         run: |
           python -m pip install --upgrade pip
-          pip install "pyinstaller<6.0" pypdf
+          pip install pyinstaller pypdf
 
-      - name: Generate Windows Version Metadata
-        shell: pwsh
-        run: |
-          @"
-          VSVersionInfo(
-            ffi=FixedFileInfo(
-              filevers=(1, 0, 0, 0),
-              prodvers=(1, 0, 0, 0),
-              mask=0x3f,
-              flags=0x0,
-              OS=0x40004,
-              fileType=0x1,
-              subtype=0x0,
-              date=(0, 0)
-            ),
-            kids=[
-              StringFileInfo([
-                StringTable(
-                  u'040904B0',
-                  [StringStruct(u'CompanyName', u'Kyxgo Technology'),
-                   StringStruct(u'FileDescription', u'Kyxgo Lite - Offline Study & Code Knowledge Engine'),
-                   StringStruct(u'FileVersion', u'1.0.0.0'),
-                   StringStruct(u'InternalName', u'KyxgoLite'),
-                   StringStruct(u'LegalCopyright', u'Copyright (c) 2026 Aditya Rai / Kyxgo Technology'),
-                   StringStruct(u'OriginalFilename', u'KyxgoLite.exe'),
-                   StringStruct(u'ProductName', u'Kyxgo Lite'),
-                   StringStruct(u'ProductVersion', u'1.0.0.0')])
-              ]),
-              VarFileInfo([VarStruct(u'Translation', [1033, 1200])])
-            ]
-          )
-          "@ | Out-File -FilePath version_info.txt -Encoding utf8
+      - name: Build Standalone EXE
+        run: pyinstaller --noconfirm --onefile --name "KyxgoLite" kyxgo_app.py
 
-      - name: Build Universal Standalone EXE
-        run: |
-          pyinstaller --noconfirm --clean --onefile --windowed `
-            --name "KyxgoLite" `
-            --paths "." `
-            --version-file "version_info.txt" `
-            --hidden-import "kyxgo_core" `
-            --hidden-import "pypdf" `
-            kyxgo_app.py
-
-      - name: Generate SHA256 Checksum
-        shell: pwsh
-        run: |
-          $hash = (Get-FileHash -Path dist\KyxgoLite.exe -Algorithm SHA256).Hash
-          "$hash  KyxgoLite.exe" | Out-File -FilePath dist\KyxgoLite.exe.sha256 -Encoding utf8
-
-      - name: Upload Build Artifacts
+      - name: Upload Build Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: KyxgoLite-Windows-Universal
-          path: |
-            dist/KyxgoLite.exe
-            dist/KyxgoLite.exe.sha256
+          name: KyxgoLite-Windows
+          path: dist/KyxgoLite.exe
 
-      - name: Create GitHub Release (on tag push)
+      - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            dist/KyxgoLite.exe
-            dist/KyxgoLite.exe.sha256
+          files: dist/KyxgoLite.exe
           generate_release_notes: true
           
